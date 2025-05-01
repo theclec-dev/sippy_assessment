@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:sippy_assessment/application/routes/app_router.dart';
 import 'package:sippy_assessment/application/theme/app_text_styles.dart';
 import 'package:sippy_assessment/core/components/app_button.dart';
+import 'package:sippy_assessment/core/components/app_dialog.dart';
 import 'package:sippy_assessment/core/components/app_snackbar.dart';
 import 'package:sippy_assessment/core/components/app_text_field.dart';
 import 'package:sippy_assessment/core/constants/assets.dart';
@@ -109,13 +110,25 @@ class _InviteLandingPageState extends State<InviteLandingPage> {
                       Provider.of<UserProvider>(context, listen: false).userId;
                   final sharedCartService = SharedCartServices();
 
-                  await sharedCartService.joinSession(
+                  final name = await sharedCartService.joinSession(
                     _idController.text,
                     userId,
                     _nameController.text,
                   );
+                  final response = await _showDialog(name);
+
+                  if (!response) {
+                    sharedCartService.checkout(
+                      _idController.text,
+                      _nameController.text,
+                      userId,
+                    );
+
+                    return;
+                  }
                   sessionId = _idController.text;
                   userName = _nameController.text;
+                  _navigateToProductsList();
                 } catch (e) {
                   if (context.mounted) {
                     showSnackBar(context, 'Error joining session: $e');
@@ -125,14 +138,30 @@ class _InviteLandingPageState extends State<InviteLandingPage> {
                     isLoading = false;
                   });
                 }
-
-                _navigateToProductsList();
               },
               text: buttonLabel(),
             ),
             const Gap(24),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<bool> _showDialog(String name) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AppDialog(
+        message: 'You are about to join a cart created by $name. Continue?',
+        primaryAction: 'Yes, join session',
+        secondaryAction: 'No, cancel',
+        onTapPrimary: () {
+          context.pop(true);
+        },
+        onTapSecondary: () {
+          context.pop(false);
+        },
+        hasSecondary: true,
       ),
     );
   }

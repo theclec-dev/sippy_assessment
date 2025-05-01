@@ -14,6 +14,7 @@ class SharedCartServices {
     final sessionRef = _db.collection('sessions').doc();
     await sessionRef.set({
       'creatorId': uid,
+      'creatorName': name,
       'participantNames': [name],
       'participantUids': [uid],
       'participants': [
@@ -24,7 +25,7 @@ class SharedCartServices {
     return sessionRef.id; // Return the session ID
   }
 
-  Future<void> joinSession(String sessionId, String uid, String name) async {
+  Future<String> joinSession(String sessionId, String uid, String name) async {
     final sessionDoc = _db.doc('sessions/$sessionId');
     // final sessionRef = _db.collection('sessions').doc(sessionId);
     await sessionDoc.update({
@@ -34,16 +35,10 @@ class SharedCartServices {
       'participantNames': FieldValue.arrayUnion([name]),
       'participantUids': FieldValue.arrayUnion([uid]),
     });
+    final creator =
+        await sessionDoc.get().then((doc) => doc['creatorName']) as String;
+    return creator;
   }
-
-// Create or join a cart
-  // Future<DocumentReference> createCart(String title, String uid) async {
-  //   return _db.collection('carts').add({
-  //     'title': title,
-  //     'createdBy': uid,
-  //     'sharedWith': [uid],
-  //   });
-  // }
 
   Stream<List<CartItem>> getCartItems(String sessionId) {
     return _db
@@ -52,6 +47,17 @@ class SharedCartServices {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => CartItem.fromSnapshot(doc)).toList());
+  }
+
+  Future<void> checkout(String sessionId, String userName, String uid) async {
+    final sessionDoc = _db.doc('sessions/$sessionId');
+    await sessionDoc.update({
+      'participants': FieldValue.arrayRemove([
+        {'uid': uid, 'name': userName}
+      ]),
+      'participantNames': FieldValue.arrayRemove([userName]),
+      'participantUids': FieldValue.arrayRemove([uid]),
+    });
   }
 
   Future<void> addItem(
@@ -96,19 +102,4 @@ class SharedCartServices {
       'lastModifiedBy': userId,
     });
   }
-
-// Add an item
-  // Future<void> addItem(String cartId, Map<String, dynamic> item) {
-  //   return _db.collection('carts').doc(cartId).collection('items').add(item);
-  // }
-
-// Update quantity
-  // Future<void> updateQty(String cartId, String itemId, int qty) {
-  //   return _db
-  //       .collection('carts')
-  //       .doc(cartId)
-  //       .collection('items')
-  //       .doc(itemId)
-  //       .update({'quantity': qty});
-  // }
 }
