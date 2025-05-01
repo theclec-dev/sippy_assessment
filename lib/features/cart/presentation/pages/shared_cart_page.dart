@@ -2,11 +2,13 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
+import 'package:provider/provider.dart';
 import 'package:sippy_assessment/application/routes/app_router.dart';
 import 'package:sippy_assessment/application/theme/app_colors.dart';
 import 'package:sippy_assessment/application/theme/app_text_styles.dart';
 import 'package:sippy_assessment/core/components/app_button.dart';
 import 'package:sippy_assessment/core/components/app_dialog.dart';
+import 'package:sippy_assessment/core/components/app_snackbar.dart';
 import 'package:sippy_assessment/core/constants/assets.dart';
 import 'package:sippy_assessment/core/constants/global_variables.dart';
 import 'package:sippy_assessment/core/network/shared_cart_service/shared_cart_services.dart';
@@ -25,6 +27,8 @@ class SharedCartPage extends StatefulWidget {
 
 class _SharedCartPageState extends State<SharedCartPage> {
   late final List<TextEditingController> _qtyControllers;
+  final sharedCartServices = SharedCartServices();
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -42,6 +46,7 @@ class _SharedCartPageState extends State<SharedCartPage> {
 
   @override
   Widget build(BuildContext context) {
+    final userId = Provider.of<UserProvider>(context).userId;
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -52,7 +57,7 @@ class _SharedCartPageState extends State<SharedCartPage> {
         ),
       ),
       body: StreamBuilder<List<CartItem>>(
-          stream: SharedCartServices().getCartItems(sessionId),
+          stream: sharedCartServices.getCartItems(sessionId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -116,6 +121,8 @@ class _SharedCartPageState extends State<SharedCartPage> {
                   ),
                   const Gap(8),
                   AppButton.primary(
+                    isLoading: _isLoading,
+                    isActive: !_isLoading,
                     onTap: () async {
                       final response = await showDialog(
                         context: context,
@@ -133,7 +140,25 @@ class _SharedCartPageState extends State<SharedCartPage> {
                         ),
                       );
                       if (response) {
-                        _navigateToConfirmation();
+                        try {
+                          setState(() {
+                            _isLoading = true;
+                          });
+                          await sharedCartServices.checkout(
+                            sessionId,
+                            userName,
+                            userId,
+                          );
+                          _navigateToConfirmation();
+                        } catch (e) {
+                          if (context.mounted) {
+                            showSnackBar(context, 'Error checking out: $e');
+                          }
+                        } finally {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        }
                       }
                     },
                     text: 'Done Shopping',

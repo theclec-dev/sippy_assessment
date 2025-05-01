@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:provider/provider.dart';
 import 'package:sippy_assessment/application/routes/app_router.dart';
+import 'package:sippy_assessment/application/theme/app_colors.dart';
 import 'package:sippy_assessment/application/theme/app_text_styles.dart';
 import 'package:sippy_assessment/core/components/app_snackbar.dart';
 import 'package:sippy_assessment/core/components/app_text_field.dart';
@@ -123,11 +124,41 @@ class _ProductsListPageState extends State<ProductsListPage> {
                 height: 25,
               ),
               actions: [
-                IconButton(
-                  onPressed: () {
-                    context.pushRoute(const SharedCartRoute());
-                  },
-                  icon: const Icon(Icons.shopping_bag),
+                Stack(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        context.pushRoute(const SharedCartRoute());
+                      },
+                      icon: const Icon(Icons.shopping_bag),
+                    ),
+                    Consumer<List<CartItem>>(
+                      builder: (context, cartItems, child) {
+                        if (cartItems.isNotEmpty) {
+                          return Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: AppColors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${cartItems.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
                 ),
               ],
               pinned: true,
@@ -183,6 +214,7 @@ class _ProductsListPageState extends State<ProductsListPage> {
                       (context, index) {
                         final bool inCart = cartProvider.any(
                             (item) => item.itemId == data.products[index].id);
+
                         return ProductCard(
                           inCart: inCart,
                           controller:
