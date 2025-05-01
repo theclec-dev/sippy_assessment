@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sippy_assessment/application/routes/app_router.dart';
 import 'package:sippy_assessment/application/theme/app_text_styles.dart';
 import 'package:sippy_assessment/core/components/app_button.dart';
@@ -24,6 +25,8 @@ class CartInvitePage extends StatefulWidget {
 class _CartInvitePageState extends State<CartInvitePage> {
   late final TextEditingController _controller;
   late final TextEditingController _linkController;
+
+  final share = SharePlus.instance;
 
   @override
   void initState() {
@@ -99,26 +102,43 @@ class _CartInvitePageState extends State<CartInvitePage> {
                 textInputType: TextInputType.text,
                 suffixIcon: IconButton(
                   onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: _linkController.text),
-                    ).then((_) {
+                    final result = await share.share(
+                      ShareParams(
+                        text:
+                            'Use the code to share my shopping cart:\n${_linkController.text}',
+                        subject: 'Join my cart session',
+                      ),
+                    );
+                    if (result.status == ShareResultStatus.success) {
                       if (context.mounted) {
                         showSnackBar(
                           context,
-                          'Copied Successfully!',
+                          'Shared Successfully!',
                           SnackBarType.success,
                         );
                       }
-                    });
+                    }
+                    // await Clipboard.setData(
+                    //   ClipboardData(text: _linkController.text),
+                    // )
+                    //     .then((_) {
+                    //   if (context.mounted) {
+                    //     showSnackBar(
+                    //       context,
+                    //       'Shared Successfully!',
+                    //       SnackBarType.success,
+                    //     );
+                    //   }
+                    // });
                   },
-                  icon: const Icon(Icons.copy),
+                  icon: const Icon(Icons.share),
                 ),
               )
             ],
             const Gap(24),
             AppButton.primary(
               isLoading: isLoading,
-              isActive: isActive(false),
+              isActive: isActive(isLoading),
               onTap: () async {
                 if (!isLinkGenerated) {
                   setState(() {

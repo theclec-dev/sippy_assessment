@@ -1,16 +1,47 @@
-# sippy_assessment
+# 🛍️ Shop With Friends - Mobile Developer Assessment (Flutter)
 
-A new Flutter project.
+This is a coding assessment for mobile developers applying to work on real-time collaborative features in a Flutter application. The project simulates a feature that allows users to invite a friend and shop together via a shared cart experience.
+— 
+## 🎯 Objective
+Implement the **Shop With Friends** flow using Flutter. A user should be able to:
+- Create a shopping session and invite a friend via a session ID
+- The friend joins the session, temporarily enters a shared cart state
+- Both users can add items to the cart, which syncs in real-time.
+- Once done, the friend exits the shared state, and the original user continues.
+---
+## 🧱 Project Structure
 
-## Getting Started
+```bash
+/lib
+  /application
+    /routes
+    /theme
+  /core
+    /components
+    /constants
+    /network
+        /auth_service
+        /sgared_cart_service
+    /utils
+  /features
+    /feature
+        /data
+            /datasources
+                /remote
+                /local
+            /mappers
+            /models
+            repositories
+        /domain
+            /entities
+            /repositories
+            /usecase
+        /presentation
+            /pages
+            /providers
+            /widgets
+  main.dart
+```
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Installation Instructions
+1. Download the 

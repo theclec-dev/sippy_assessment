@@ -24,10 +24,8 @@ class ProductsListPage extends StatefulWidget {
 
 class _ProductsListPageState extends State<ProductsListPage> {
   late final TextEditingController _searchController;
-  // final List<TextEditingController> _qtyController = [];
-  // final List<bool> _isLoading = [];
-  final Map<String, TextEditingController> _controllers = {};
-  final Map<String, bool> _isLoading = {};
+  late final List<TextEditingController> _qtyController;
+  final List<bool> _isLoading = [];
 
   final sharedCartServices = SharedCartServices();
 
@@ -41,68 +39,41 @@ class _ProductsListPageState extends State<ProductsListPage> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final items = Provider.of<ProductsList>(context).products;
-    // Initialize controllers for new items
-    for (final item in items) {
-      _controllers.putIfAbsent(
-        item.id.toString(),
-        () => TextEditingController(text: '1'),
-      );
-      _isLoading.putIfAbsent(item.id.toString(), () => false);
-    }
-    // Dispose & remove controllers for items no longer present
-    final removedKeys = _controllers.keys
-        .where(
-          (id) => items.every((item) => item.id.toString() != id),
-        )
-        .toList();
-    for (final id in removedKeys) {
-      _controllers.remove(id)?.dispose();
-      _isLoading.remove(id);
-    }
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
-    // for (final controller in _qtyController) {
-    //   controller.dispose();
-    // }
-    for (final c in _controllers.values) {
-      c.dispose();
+    for (final controller in _qtyController) {
+      controller.dispose();
     }
     super.dispose();
   }
 
-  // void _ensureQtyControllers(int count) {
-  //   if (_qtyController.length < count) {
-  //     final toAdd = count - _qtyController.length;
-  //     for (var i = 0; i < toAdd; i++) {
-  //       _isLoading.add(false);
-  //     }
-  //   } else if (_qtyController.length > count) {
-  //     final toRemove = _qtyController.length - count;
-  //     for (var i = 0; i < toRemove; i++) {
-  //       _qtyController.removeLast().dispose();
-  //     }
-  //   }
-  // }
+  void _ensureQtyControllers(int count) {
+    if (_qtyController.length < count) {
+      final toAdd = count - _qtyController.length;
+      for (var i = 0; i < toAdd; i++) {
+        _isLoading.add(false);
+      }
+    } else if (_qtyController.length > count) {
+      final toRemove = _qtyController.length - count;
+      for (var i = 0; i < toRemove; i++) {
+        _qtyController.removeLast().dispose();
+      }
+    }
+  }
 
-  // void _ensureLoadingFlags(int count) {
-  //   if (_isLoading.length < count) {
-  //     final toAdd = count - _isLoading.length;
-  //     for (var i = 0; i < toAdd; i++) {
-  //       _isLoading.add(false);
-  //     }
-  //   } else if (_isLoading.length > count) {
-  //     final toRemove = _isLoading.length - count;
-  //     for (var i = 0; i < toRemove; i++) {
-  //       _isLoading.removeLast();
-  //     }
-  //   }
-  // }
+  void _ensureLoadingFlags(int count) {
+    if (_isLoading.length < count) {
+      final toAdd = count - _isLoading.length;
+      for (var i = 0; i < toAdd; i++) {
+        _isLoading.add(false);
+      }
+    } else if (_isLoading.length > count) {
+      final toRemove = _isLoading.length - count;
+      for (var i = 0; i < toRemove; i++) {
+        _isLoading.removeLast();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,8 +130,8 @@ class _ProductsListPageState extends State<ProductsListPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               sliver: Consumer<ProductsList>(
                 builder: (context, data, child) {
-                  // _ensureQtyControllers(data.products.length);
-                  // _ensureLoadingFlags(data.products.length);
+                  _ensureQtyControllers(data.products.length);
+                  _ensureLoadingFlags(data.products.length);
                   if (data.isLoading) {
                     return const SliverToBoxAdapter(
                       child: Padding(
@@ -181,22 +152,20 @@ class _ProductsListPageState extends State<ProductsListPage> {
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
+                        _qtyController = List.generate(
+                          data.products.length,
+                          (index) => TextEditingController(text: '1'),
+                        );
                         final bool inCart = cartProvider.any(
                             (item) => item.itemId == data.products[index].id);
                         return ProductCard(
                           inCart: inCart,
-                          controller:
-                              _controllers[data.products[index].id.toString()]!,
+                          controller: _qtyController[index],
+                          // controller: TextEditingController(),
                           product: data.products[index],
-                          isLoading:
-                              _isLoading[data.products[index].id.toString()] ??
-                                  false,
+                          // isLoading: _isLoading[index],
                           onTapPrimary: () async {
                             final sharedCartServices = SharedCartServices();
-                            setState(() {
-                              _isLoading[data.products[index].id.toString()] =
-                                  true;
-                            });
                             try {
                               if (inCart) {
                                 await sharedCartServices.deleteItem(
@@ -212,9 +181,8 @@ class _ProductsListPageState extends State<ProductsListPage> {
                               await sharedCartServices.addItem(
                                 sessionId: sessionId,
                                 itemName: data.products[index].name,
-                                quantity: int.parse(_controllers[
-                                        data.products[index].id.toString()]!
-                                    .text),
+                                quantity: int.parse(_qtyController[index].text),
+                                // quantity: 1,
                                 userId: userId,
                                 userName: userName,
                                 inStock: data.products[index].inStock.toInt(),
@@ -230,23 +198,10 @@ class _ProductsListPageState extends State<ProductsListPage> {
                               }
                             } finally {
                               setState(() {
-                                _isLoading[data.products[index].id.toString()] =
-                                    false;
+                                _isLoading[index] = false;
                               });
                             }
 
-                            // final isInCart =
-                            //     cartProvider.isInCart(data.products[index]);
-                            // if (isInCart) {
-                            //   cartProvider.removeItem(cartProvider
-                            //       .getItemById(data.products[index].id));
-                            //   setState(() {});
-                            //   return;
-                            // }
-                            // cartProvider.addItem(
-                            //   data.products[index],
-                            //   int.parse(_qtyController[index].text),
-                            // );
                             setState(() {});
                           },
                         );

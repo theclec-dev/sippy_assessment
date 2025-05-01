@@ -15,6 +15,7 @@ class ProductCard extends StatefulWidget {
     this.inCart = false,
     this.isLoading = false,
     required this.onTapPrimary,
+    
   });
 
   final TextEditingController controller;
@@ -150,7 +151,7 @@ class _ProductCardState extends State<ProductCard> {
                 AppButton.primary(
                   isLoading: widget.isLoading,
                   isActive: widget.controller.text.isNotEmpty &&
-                      int.parse(widget.controller.text) > 0,
+                      int.parse(widget.controller.text) > 0 && !widget.isLoading,
                   backgroundColor:
                       widget.inCart ? AppColors.red : AppColors.primary,
                   onTap: widget.onTapPrimary,

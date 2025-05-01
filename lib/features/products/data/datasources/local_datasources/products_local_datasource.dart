@@ -8,7 +8,7 @@ class ProductsLocalDatasourceImpl implements ProductsLocalDatasource {
   @override
   Future<List<ProductModel>> getProducts() async {
     // Simulate a delay for fetching products from local storage
-    await Future.delayed(const Duration(seconds: 2));
+    // await Future.delayed(const Duration(seconds: 2));
     return List.generate(
       20,
       (index) => ProductModel(

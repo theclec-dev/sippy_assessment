@@ -12,6 +12,8 @@ class ProductsList with ChangeNotifier {
 
   List<Product> get products => _products;
 
+  int get size => _products.length;
+
   Future<void> fetchProducts() async {
     try {
       _isLoading = true;
