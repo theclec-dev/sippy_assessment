@@ -1,0 +1,226 @@
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gap/gap.dart';
+import 'package:provider/provider.dart';
+import 'package:sippy_assessment/application/routes/app_router.dart';
+import 'package:sippy_assessment/application/theme/app_text_styles.dart';
+import 'package:sippy_assessment/core/components/app_snackbar.dart';
+import 'package:sippy_assessment/core/components/app_text_field.dart';
+import 'package:sippy_assessment/core/constants/assets.dart';
+import 'package:sippy_assessment/core/constants/global_variables.dart';
+import 'package:sippy_assessment/core/network/shared_cart_service/shared_cart_services.dart';
+import 'package:sippy_assessment/features/cart/domain/entities/cart_item.dart';
+import 'package:sippy_assessment/features/products/presentation/providers/products_provider.dart';
+import 'package:sippy_assessment/features/products/presentation/widgets/product_card.dart';
+
+@RoutePage()
+class ProductsListPage extends StatefulWidget {
+  const ProductsListPage({super.key});
+
+  @override
+  State<ProductsListPage> createState() => _ProductsListPageState();
+}
+
+class _ProductsListPageState extends State<ProductsListPage> {
+  late final TextEditingController _searchController;
+  final List<TextEditingController> _qtyController = [];
+  final List<bool> _isLoading = [];
+
+  final sharedCartServices = SharedCartServices();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ProductsList>(context, listen: false).fetchProducts();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    for (final controller in _qtyController) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _ensureQtyControllers(int count) {
+    if (_qtyController.length < count) {
+      final toAdd = count - _qtyController.length;
+      for (var i = 0; i < toAdd; i++) {
+        _isLoading.add(false);
+      }
+    } else if (_qtyController.length > count) {
+      final toRemove = _qtyController.length - count;
+      for (var i = 0; i < toRemove; i++) {
+        _qtyController.removeLast().dispose();
+      }
+    }
+  }
+
+  void _ensureLoadingFlags(int count) {
+    if (_isLoading.length < count) {
+      final toAdd = count - _isLoading.length;
+      for (var i = 0; i < toAdd; i++) {
+        _isLoading.add(false);
+      }
+    } else if (_isLoading.length > count) {
+      final toRemove = _isLoading.length - count;
+      for (var i = 0; i < toRemove; i++) {
+        _isLoading.removeLast();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cartProvider = Provider.of<List<CartItem>>(context, listen: true);
+    final productsProvider = Provider.of<ProductsList>(context, listen: false);
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () => productsProvider.fetchProducts(),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              centerTitle: true,
+              automaticallyImplyLeading: true,
+              title: SvgPicture.asset(
+                logo,
+                height: 25,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    context.pushRoute(const SharedCartRoute());
+                  },
+                  icon: const Icon(Icons.shopping_bag),
+                ),
+              ],
+              pinned: true,
+              scrolledUnderElevation: 0,
+              elevation: 0,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  'To find your desired drink faster, please search for it with the drink name or for Alcohol drinks use the keywords like Wine, Whiskey, Spirit etc (Currently open for people in Lagos and Abuja)',
+                  style: AppTextStyles.bodyRegular,
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: Gap(12)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: AppTextfield(
+                  controller: _searchController,
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'Search for a drink',
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: Gap(16)),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              sliver: Consumer<ProductsList>(
+                builder: (context, data, child) {
+                  _ensureQtyControllers(data.products.length);
+                  _ensureLoadingFlags(data.products.length);
+                  if (data.isLoading) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 12.0),
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    );
+                  }
+                  return SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 150 / 300,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final bool inCart = cartProvider.any(
+                            (item) => item.itemId == data.products[index].id);
+                        return ProductCard(
+                          inCart: inCart,
+                          controller: _qtyController[index],
+                          product: data.products[index],
+                          isLoading: _isLoading[index],
+                          onTapPrimary: () async {
+                            final sharedCartServices = SharedCartServices();
+                            try {
+                              if (inCart) {
+                                await sharedCartServices.deleteItem(
+                                  sessionId,
+                                  cartProvider
+                                      .firstWhere((item) =>
+                                          item.itemId ==
+                                          data.products[index].id)
+                                      .id,
+                                );
+                                return;
+                              }
+                              await sharedCartServices.addItem(
+                                sessionId: sessionId,
+                                itemName: data.products[index].name,
+                                quantity: int.parse(_qtyController[index].text),
+                                userId: userId,
+                                userName: userName,
+                                inStock: data.products[index].inStock.toInt(),
+                                itemId: data.products[index].id,
+                                itemPrice: data.products[index].price,
+                                itemImageUrl: data.products[index].imageUrl,
+                                description: data.products[index].description,
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                showSnackBar(
+                                    context, 'Error: Failed to modify cart.');
+                              }
+                            } finally {
+                              setState(() {
+                                _isLoading[index] = false;
+                              });
+                            }
+
+                            // final isInCart =
+                            //     cartProvider.isInCart(data.products[index]);
+                            // if (isInCart) {
+                            //   cartProvider.removeItem(cartProvider
+                            //       .getItemById(data.products[index].id));
+                            //   setState(() {});
+                            //   return;
+                            // }
+                            // cartProvider.addItem(
+                            //   data.products[index],
+                            //   int.parse(_qtyController[index].text),
+                            // );
+                            setState(() {});
+                          },
+                        );
+                      },
+                      childCount: data.products.length,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
