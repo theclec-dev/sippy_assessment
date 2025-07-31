@@ -87,3 +87,16 @@ The products list was hardcoded as opposed to using dummy json 'https://dummyjso
 
 Allow for user regitration for easy handling and tracking of network calls.
 Allow for creating/joining of multiple sessions without restarting application.
+
+---
+
+## Assumptions Made
+
+- Each shopping session is uniquely identified by a session ID, which is shared manually (e.g., copied and sent to the friend).
+- Real-time syncing is achieved using Firebase Realtime Database.
+- Multiple users are allowed in a single session at a time — the session creator and one invited friend.
+- No authentication system was required; users are identified by temporary IDs or nicknames during testing.
+- Cart state is synced in real-time while users are in the shared session.
+- When a user leaves, the cart is still available to other users in the session at the time.
+- Inventory or product listing is mocked with static or locally fetched data.
+- Persistence is limited to the current session and resets on app restart for demo purposes.
